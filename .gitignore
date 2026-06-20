@@ -1,1 +1,5 @@
 /dist
+/howtobuild.txt
+/howtoupload.txt
+.*.sw?
+__pycache__/
