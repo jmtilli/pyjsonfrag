@@ -120,6 +120,8 @@ class FragmentHandler(JsonHandler):
         self.fragstack[-1][key] = num
       else:
         self.fragstack[-1].append(num)
+    if self.collect:
+      return
     self.handle_frag_number(key, num, is_integer)
   def handle_string(self, key, val):
     if self.collect and self.fragstack:
@@ -127,6 +129,8 @@ class FragmentHandler(JsonHandler):
         self.fragstack[-1][key] = val
       else:
         self.fragstack[-1].append(val)
+    if self.collect:
+      return
     self.handle_frag_string(key, val)
   def handle_boolean(self, key, val):
     if self.collect and self.fragstack:
@@ -134,6 +138,8 @@ class FragmentHandler(JsonHandler):
         self.fragstack[-1][key] = val
       else:
         self.fragstack[-1].append(val)
+    if self.collect:
+      return
     self.handle_frag_boolean(key, val)
   def handle_null(self, key):
     val = None
@@ -142,6 +148,8 @@ class FragmentHandler(JsonHandler):
         self.fragstack[-1][key] = val
       else:
         self.fragstack[-1].append(val)
+    if self.collect:
+      return
     self.handle_frag_null(key)
 
 class JsonStream(object):
