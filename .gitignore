@@ -3,3 +3,4 @@
 /howtoupload.txt
 .*.sw?
 __pycache__/
+/examples/pyjsonfrag
