@@ -19,16 +19,24 @@ JSONSTREAM_MODE_NUMBER = 16
 JSONSTREAM_MODE_ENDWS = 17
 
 class JsonHandler(object):
-  def __init__(self, handle_comment = None, start_dict = None, start_array = None, end_dict = None, end_array = None, handle_number = None, handle_string = None, handle_boolean = None, handle_null = None):
-    self.handle_comment = handle_comment
-    self.start_dict = start_dict
-    self.start_array = start_array
-    self.end_dict = end_dict
-    self.end_array = end_array
-    self.handle_number = handle_number
-    self.handle_string = handle_string
-    self.handle_boolean = handle_boolean
-    self.handle_null = handle_null
+  def handle_comment(self, comma_seen, val, is_multiline):
+    pass
+  def start_dict(self, key):
+    pass
+  def start_array(self, key):
+    pass
+  def end_dict(self, key):
+    pass
+  def end_array(self, key):
+    pass
+  def handle_number(self, key, num, is_integer):
+    pass
+  def handle_string(self, key, val):
+    pass
+  def handle_boolean(self, key, val):
+    pass
+  def handle_null(self, key):
+    pass
 
 class JsonStream(object):
   def __init__(self, handler):
@@ -47,6 +55,7 @@ class JsonStream(object):
     self.val = io.StringIO()
     self.handler = handler
     self.is_integer = False
+    self.comma_seen = False
   def allow_comments(self):
     self.comments = True
   def allow_trailing_comma(self):
@@ -103,7 +112,7 @@ class JsonStream(object):
           self.c_comment_seen = False
           self.c_comment_seen_star = False
           if self.handler.handle_comment:
-            self.handler.handle_comment(self, self.comma_seen, self.val.getvalue(), True)
+            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), True)
         else:
           if self.c_comment_seen_star:
             self.val.write('*')
@@ -115,7 +124,7 @@ class JsonStream(object):
         if buf[start+i] == '\n':
           self.cpp_comment_seen = False
           if self.handler.handle_comment:
-            self.handler.handle_comment(self, self.comma_seen, self.val.getvalue(), False)
+            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
         else:
           self.val.write(buf[start+i])
         i+=1
@@ -167,7 +176,7 @@ class JsonStream(object):
               return -1
             i += 1
             continue
-          self.handler.handle_string(self, self.get_key(), self.val.getvalue())
+          self.handler.handle_string(self.get_key(), self.val.getvalue())
           if len(self.keystack) == 0:
             self.strip_comment(buf, start, i, sz, eof)
             if eof:
@@ -261,7 +270,7 @@ class JsonStream(object):
           self.c_comment_seen = False
           self.c_comment_seen_star = False
           if self.handler.handle_comment:
-            self.handler.handle_comment(self, self.comma_seen, self.val.getvalue(), True)
+            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), True)
         else:
           if self.c_comment_seen_star:
             self.val.write('*')
@@ -273,7 +282,7 @@ class JsonStream(object):
         if buf[start+i] == '\n':
           self.cpp_comment_seen = False
           if self.handler.handle_comment:
-            self.handler.handle_comment(self, self.comma_seen, self.val.getvalue(), False)
+            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
         else:
           self.val.write(buf[start+i])
         i += 1
@@ -315,7 +324,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler.end_dict(self, self.get_key())
+        self.handler.end_dict(self.get_key())
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -339,7 +348,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler.end_array(self, self.get_key())
+        self.handler.end_array(self.get_key())
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -354,7 +363,7 @@ class JsonStream(object):
           self.put_keystack_2()
           i += 1
           continue
-        self.handler.start_dict(self, self.get_key())
+        self.handler.start_dict(self.get_key())
         self.put_keystack_2()
         i += 1
         continue
@@ -365,7 +374,7 @@ class JsonStream(object):
           self.put_keystack_2()
           i += 1
           continue
-        self.handler.start_array(self, self.get_key())
+        self.handler.start_array(self.get_key())
         self.put_keystack_2()
         i += 1
         continue
@@ -386,7 +395,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler.handle_boolean(self, self.get_key(), True)
+        self.handler.handle_boolean(self.get_key(), True)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -411,7 +420,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler.handle_boolean(self, self.get_key(), False)
+        self.handler.handle_boolean(self.get_key(), False)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -436,7 +445,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler.handle_null(self, self.get_key())
+        self.handler.handle_null(self.get_key())
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -509,7 +518,7 @@ class JsonStream(object):
               return 0
             return -1
           continue # without i += 1 on purpose
-        self.handler.handle_number(self, self.get_key(), numval, self.is_integer)
+        self.handler.handle_number(self.get_key(), numval, self.is_integer)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i-1, sz, eof)
           if eof:
@@ -525,7 +534,7 @@ class JsonStream(object):
           return 0
         self.errloc = i
         raise Exception("invalid JSON")
-      self.handler.handle_number(self, self.get_key(), float(self.val.getvalue()), self.is_integer)
+      self.handler.handle_number(self.get_key(), float(self.val.getvalue()), self.is_integer)
       if len(self.keystack) == 0:
         return 0
       self.errloc = i
@@ -547,88 +556,81 @@ def jsonstream_tree_parse(buf, allow_comments=False, allow_trailing_comma=False)
       self.element = None
   c = ElementContainer()
   stack = []
-  def start_dict(stream, key):
-    obj = {}
-    if not c.has_element:
-      c.has_element = True
-      c.element = obj
+  class MyHandler(JsonHandler):
+    def start_dict(self, key):
+      obj = {}
+      if not c.has_element:
+        c.has_element = True
+        c.element = obj
+        stack.append(obj)
+        return
+      if key is not None:
+        stack[-1][key] = obj
+      else:
+        stack[-1].append(obj)
       stack.append(obj)
-      return
-    if key is not None:
-      stack[-1][key] = obj
-    else:
-      stack[-1].append(obj)
-    stack.append(obj)
-  def start_array(stream, key):
-    obj = []
-    if not c.has_element:
-      c.has_element = True
-      c.element = obj
+    def start_array(self, key):
+      obj = []
+      if not c.has_element:
+        c.has_element = True
+        c.element = obj
+        stack.append(obj)
+        return
+      if key is not None:
+        stack[-1][key] = obj
+      else:
+        stack[-1].append(obj)
       stack.append(obj)
-      return
-    if key is not None:
-      stack[-1][key] = obj
-    else:
-      stack[-1].append(obj)
-    stack.append(obj)
-  def end_dict(stream, key):
-    stack.pop()
-  def end_array(stream, key):
-    stack.pop()
-  def handle_number(stream, key, num, is_integer):
-    if is_integer:
-      num = int(num)
-    if not c.has_element:
-      c.has_element = True
-      c.element = num
-      return
-    if key is not None:
-      stack[-1][key] = num
-    else:
-      stack[-1].append(num)
-    if not c.has_element:
-      c.has_element = True
-      c.element = num
-  def handle_string(stream, key, val):
-    if not c.has_element:
-      c.has_element = True
-      c.element = val
-      return
-    if key is not None:
-      stack[-1][key] = val
-    else:
-      stack[-1].append(val)
-    if not c.has_element:
-      c.has_element = True
-      c.element = val
-  def handle_boolean(stream, key, val):
-    if not c.has_element:
-      c.has_element = True
-      c.element = val
-      return
-    if key is not None:
-      stack[-1][key] = val
-    else:
-      stack[-1].append(val)
-  def handle_null(stream, key):
-    val = None
-    if not c.has_element:
-      c.has_element = True
-      c.element = val
-      return
-    if key is not None:
-      stack[-1][key] = val
-    else:
-      stack[-1].append(val)
-  handler = JsonHandler(
-    start_dict=start_dict,
-    start_array=start_array,
-    end_dict=end_dict,
-    end_array=end_array,
-    handle_number=handle_number,
-    handle_string=handle_string,
-    handle_boolean=handle_boolean,
-    handle_null=handle_null)
+    def end_dict(self, key):
+      stack.pop()
+    def end_array(self, key):
+      stack.pop()
+    def handle_number(self, key, num, is_integer):
+      if is_integer:
+        num = int(num)
+      if not c.has_element:
+        c.has_element = True
+        c.element = num
+        return
+      if key is not None:
+        stack[-1][key] = num
+      else:
+        stack[-1].append(num)
+      if not c.has_element:
+        c.has_element = True
+        c.element = num
+    def handle_string(self, key, val):
+      if not c.has_element:
+        c.has_element = True
+        c.element = val
+        return
+      if key is not None:
+        stack[-1][key] = val
+      else:
+        stack[-1].append(val)
+      if not c.has_element:
+        c.has_element = True
+        c.element = val
+    def handle_boolean(self, key, val):
+      if not c.has_element:
+        c.has_element = True
+        c.element = val
+        return
+      if key is not None:
+        stack[-1][key] = val
+      else:
+        stack[-1].append(val)
+    def handle_null(self, key):
+      val = None
+      if not c.has_element:
+        c.has_element = True
+        c.element = val
+        return
+      if key is not None:
+        stack[-1][key] = val
+      else:
+        stack[-1].append(val)
+  handler = MyHandler()
   stream = JsonStream(handler)
   if allow_comments:
     stream.allow_comments()
