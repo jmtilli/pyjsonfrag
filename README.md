@@ -83,8 +83,8 @@ class Customer(object):
       self.totalBalance = float(totalBalance)
     else:
       self.totalBalance = None
-  def __repr__(self):
-    return ("Customer(%d,%s,%d,%.2f)" % (self.customerId,self.name,self.accountCount,self.totalBalance))
+  def __repr__(s):
+    return ("Customer(%d,%s,%d,%.2f)" % (s.customerId,s.name,s.accountCount,s.totalBalance))
 
 context = []
 cs = {}
