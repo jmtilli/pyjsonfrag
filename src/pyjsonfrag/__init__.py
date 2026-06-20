@@ -273,7 +273,7 @@ class JsonStream(object):
         if buf[start+i] == '\n':
           self.cpp_comment_seen = False
           if self.handler.handle_comment:
-            self.handler_handle_comment(self, self.comma_seen, self.val.getvalue(), False)
+            self.handler.handle_comment(self, self.comma_seen, self.val.getvalue(), False)
         else:
           self.val.write(buf[start+i])
         i += 1
@@ -386,7 +386,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler_handle_boolean(self, self.get_key(), True)
+        self.handler.handle_boolean(self, self.get_key(), True)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -411,7 +411,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler_handle_boolean(self, self.get_key(), False)
+        self.handler.handle_boolean(self, self.get_key(), False)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
@@ -436,7 +436,7 @@ class JsonStream(object):
             return -1
           i += 1
           continue
-        self.handler_handle_null(self, self.get_key())
+        self.handler.handle_null(self, self.get_key())
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i, sz, eof)
           if eof:
