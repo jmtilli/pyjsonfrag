@@ -540,10 +540,110 @@ class JsonStream(object):
       raise Exception("invalid JSON, parsing not finished at end")
     return -1
 
+def jsonstream_tree_parse(buf, allow_comments=False, allow_trailing_comma=False):
+  class ElementContainer(object):
+    def __init__(self):
+      self.has_element = False
+      self.element = None
+  c = ElementContainer()
+  stack = []
+  def start_dict(stream, key):
+    obj = {}
+    if not c.has_element:
+      c.has_element = True
+      c.element = obj
+      stack.append(obj)
+      return
+    if key is not None:
+      stack[-1][key] = obj
+    else:
+      stack[-1].append(obj)
+    stack.append(obj)
+  def start_array(stream, key):
+    obj = []
+    if not c.has_element:
+      c.has_element = True
+      c.element = obj
+      stack.append(obj)
+      return
+    if key is not None:
+      stack[-1][key] = obj
+    else:
+      stack[-1].append(obj)
+    stack.append(obj)
+  def end_dict(stream, key):
+    stack.pop()
+  def end_array(stream, key):
+    stack.pop()
+  def handle_number(stream, key, num, is_integer):
+    if is_integer:
+      num = int(num)
+    if not c.has_element:
+      c.has_element = True
+      c.element = num
+      return
+    if key is not None:
+      stack[-1][key] = num
+    else:
+      stack[-1].append(num)
+    if not c.has_element:
+      c.has_element = True
+      c.element = num
+  def handle_string(stream, key, val):
+    if not c.has_element:
+      c.has_element = True
+      c.element = val
+      return
+    if key is not None:
+      stack[-1][key] = val
+    else:
+      stack[-1].append(val)
+    if not c.has_element:
+      c.has_element = True
+      c.element = val
+  def handle_boolean(stream, key, val):
+    if not c.has_element:
+      c.has_element = True
+      c.element = val
+      return
+    if key is not None:
+      stack[-1][key] = val
+    else:
+      stack[-1].append(val)
+  def handle_null(stream, key):
+    val = None
+    if not c.has_element:
+      c.has_element = True
+      c.element = val
+      return
+    if key is not None:
+      stack[-1][key] = val
+    else:
+      stack[-1].append(val)
+  handler = JsonHandler(
+    start_dict=start_dict,
+    start_array=start_array,
+    end_dict=end_dict,
+    end_array=end_array,
+    handle_number=handle_number,
+    handle_string=handle_string,
+    handle_boolean=handle_boolean,
+    handle_null=handle_null)
+  stream = JsonStream(handler)
+  if allow_comments:
+    stream.allow_comments()
+  if allow_trailing_comma:
+    stream.allow_trailing_comma()
+  stream.feed(buf, 0, len(buf), True)
+  if not c.has_element:
+    raise Exception("invalid JSON")
+  return c.element
+
 if __name__ == '__main__':
   handler = JsonHandler()
-  buf = "//foo\n /* fof */ { //bar\n  \"foo\": [1 //baz\n, /*2,*/ 3 //quux\n], \"bar\": 4, \"baz\": {}, \"barf\": []   , \"quux\": [true, false, null,],  } // endcomment"
+  buf = "//foo\n /* fof */ { //bar\n  \"foo\\u03a9\": [1 //baz\n, /*2,*/ 3 //quux\n], \"bar\": 4.0, \"baz\": {}, \"barf\": []   , \"quux\": [true, false, null,],  } // endcomment"
   stream = JsonStream(handler)
   stream.allow_comments()
   stream.allow_trailing_comma()
-  stream.feed(buf, 0, len(buf), True)
+  print(stream.feed(buf, 0, len(buf), True))
+  print(jsonstream_tree_parse(buf, True, True))
