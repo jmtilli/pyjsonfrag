@@ -167,7 +167,7 @@ class JsonStream(object):
               return -1
             i += 1
             continue
-          self.handler.handle_string(self.get_key(), self.val.getvalue())
+          self.handler.handle_string(self, self.get_key(), self.val.getvalue())
           if len(self.keystack) == 0:
             self.strip_comment(buf, start, i, sz, eof)
             if eof:
@@ -509,7 +509,7 @@ class JsonStream(object):
               return 0
             return -1
           continue # without i += 1 on purpose
-        self.handler.handle_number(self.get_key(), numval, self.is_integer)
+        self.handler.handle_number(self, self.get_key(), numval, self.is_integer)
         if len(self.keystack) == 0:
           self.strip_comment(buf, start, i-1, sz, eof)
           if eof:
