@@ -56,7 +56,8 @@ class FragmentHandler(JsonHandler):
     pass
   def start_dict(self, key):
     self.stack.append(key)
-    self.start_frag_dict(key)
+    if not self.collect:
+      self.start_frag_dict(key)
     if self.collect:
       obj = {}
       if self.fragstack:
@@ -69,7 +70,8 @@ class FragmentHandler(JsonHandler):
     pass
   def start_array(self, key):
     self.stack.append(key)
-    self.start_frag_array(key)
+    if not self.collect:
+      self.start_frag_array(key)
     if self.collect:
       obj = []
       if self.fragstack:
@@ -87,7 +89,8 @@ class FragmentHandler(JsonHandler):
       if not self.fragstack:
         val = val1
         self.collect = False
-    self.end_frag_dict(key, val)
+    if not self.collect:
+      self.end_frag_dict(key, val)
     self.stack.pop()
   def end_frag_array(self, key, val):
     pass
@@ -98,7 +101,8 @@ class FragmentHandler(JsonHandler):
       if not self.fragstack:
         val = val1
         self.collect = False
-    self.end_frag_array(key, val)
+    if not self.collect:
+      self.end_frag_array(key, val)
     self.stack.pop()
   def handle_frag_number(self, key, num, is_integer):
     pass
