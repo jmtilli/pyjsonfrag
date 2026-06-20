@@ -38,6 +38,108 @@ class JsonHandler(object):
   def handle_null(self, key):
     pass
 
+class FragmentHandler(JsonHandler):
+  def __init__(self):
+    self.stack = []
+    self.fragstack = []
+    self.collect = False
+    self.val = None
+  def path_is(self, path):
+    return self.stack == path
+  def start_frag_collection(self):
+    self.collect = True
+  def handle_frag_comment(self, comma_seen, val, is_multiline):
+    pass
+  def handle_comment(self, comma_seen, val, is_multiline):
+    self.handle_frag_comment(comma_seen, val, is_multiline)
+  def start_frag_dict(self, key):
+    pass
+  def start_dict(self, key):
+    self.stack.append(key)
+    self.start_frag_dict(key)
+    if self.collect:
+      obj = {}
+      if self.fragstack:
+        if key is not None:
+          self.fragstack[-1][key] = obj
+        else:
+          self.fragstack[-1].append(obj)
+      self.fragstack.append(obj)
+  def start_frag_array(self, key):
+    pass
+  def start_array(self, key):
+    self.stack.append(key)
+    self.start_frag_array(key)
+    if self.collect:
+      obj = []
+      if self.fragstack:
+        if key is not None:
+          self.fragstack[-1][key] = obj
+        else:
+          self.fragstack[-1].append(obj)
+      self.fragstack.append(obj)
+  def end_frag_dict(self, key, val):
+    pass
+  def end_dict(self, key):
+    val = None
+    if self.fragstack:
+      val1 = self.fragstack.pop()
+      if not self.fragstack:
+        val = val1
+        self.collect = False
+    self.end_frag_dict(key, val)
+    self.stack.pop()
+  def end_frag_array(self, key, val):
+    pass
+  def end_array(self, key):
+    val = None
+    if self.fragstack:
+      val1 = self.fragstack.pop()
+      if not self.fragstack:
+        val = val1
+        self.collect = False
+    self.end_frag_array(key, val)
+    self.stack.pop()
+  def handle_frag_number(self, key, num, is_integer):
+    pass
+  def handle_frag_string(self, key, val):
+    pass
+  def handle_frag_boolean(self, key, val):
+    pass
+  def handle_frag_null(self, key):
+    pass
+  def handle_number(self, key, num, is_integer):
+    if is_integer:
+      num = int(num)
+    if self.collect and self.fragstack:
+      if key is not None:
+        self.fragstack[-1][key] = num
+      else:
+        self.fragstack[-1].append(num)
+    self.handle_frag_number(key, num, is_integer)
+  def handle_string(self, key, val):
+    if self.collect and self.fragstack:
+      if key is not None:
+        self.fragstack[-1][key] = val
+      else:
+        self.fragstack[-1].append(val)
+    self.handle_frag_string(key, val)
+  def handle_boolean(self, key, val):
+    if self.collect and self.fragstack:
+      if key is not None:
+        self.fragstack[-1][key] = val
+      else:
+        self.fragstack[-1].append(val)
+    self.handle_frag_boolean(key, val)
+  def handle_null(self, key):
+    val = None
+    if self.collect and self.fragstack:
+      if key is not None:
+        self.fragstack[-1][key] = val
+      else:
+        self.fragstack[-1].append(val)
+    self.handle_frag_null(key)
+
 class JsonStream(object):
   def __init__(self, handler):
     self.mode = JSONSTREAM_MODE_VAL
