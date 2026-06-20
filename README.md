@@ -142,7 +142,10 @@ Note how the code is significantly more simple than for the event-based approach
 Of course, the new library supports getting the whole parse tree in memory:
 
 ```
-# FIXME
+import pyjsonfrag
+
+with open("customers.json", "r") as f:
+  print(pyjsonfrag.jsonstream_tree_parse(f.read()))
 ```
 
 ## License
