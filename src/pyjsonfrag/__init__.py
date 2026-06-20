@@ -623,7 +623,10 @@ class JsonStream(object):
           self.val.write(buf[start+i])
           i += 1
           continue
-        numval = float(self.val.getvalue())
+        if self.is_integer:
+          numval = int(self.val.getvalue())
+        else:
+          numval = float(self.val.getvalue())
         self.mode = JSONSTREAM_MODE_COMMA
         if not self.handler.handle_number:
           if len(self.keystack) == 0:
@@ -648,7 +651,11 @@ class JsonStream(object):
           return 0
         self.errloc = i
         raise Exception("invalid JSON")
-      self.handler.handle_number(self.get_key(), float(self.val.getvalue()), self.is_integer)
+      if self.is_integer:
+        numval = int(self.val.getvalue())
+      else:
+        numval = float(self.val.getvalue())
+      self.handler.handle_number(self.get_key(), numval, self.is_integer)
       if len(self.keystack) == 0:
         return 0
       self.errloc = i
