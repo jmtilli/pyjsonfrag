@@ -113,7 +113,8 @@ def handle_number(stream, key, num, is_integer):
   elif key == "totalBalance":
     c.totalBalance = num
 
-handler = pyjsonfrag.JsonHandler(start_dict=start_dict, start_array=start_array, end_dict=end_dict, end_array=end_array, handle_string=handle_string, handle_number=handle_number)
+handler = pyjsonfrag.JsonHandler(start_dict=start_dict, start_array=start_array, end_dict=end_dict,
+            end_array=end_array, handle_string=handle_string, handle_number=handle_number)
 stream = pyjsonfrag.JsonStream(handler)
 with open("customers.json", "r") as f:
   while True:
