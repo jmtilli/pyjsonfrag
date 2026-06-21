@@ -186,6 +186,7 @@ class JsonSink(object):
     self.commentcomma = False
     self.commentnewline = False
   def internal_indent(self, comma):
+    """for internal use only"""
     if self.indentamount is not None:
       toindent = self.curindentlevel * self.indentamount
     else:
@@ -232,8 +233,10 @@ class JsonSink(object):
     if do_extracomma:
       self.sink_data(", ")
   def internal_put_string(self, val):
+    """for internal use only"""
     self.sink_data(json.dumps(str(val)))
   def internal_put_number(self, val):
+    """for internal use only"""
     if type(val) == int:
       self.sink_data(str(val))
     else:
@@ -242,6 +245,7 @@ class JsonSink(object):
         raise Exception("number not finite")
       self.sink_data(str(fl))
   def internal_put_number_ex(self, val):
+    """for internal use only"""
     if type(val) == int:
       self.sink_data(str(val))
     else:
@@ -251,11 +255,13 @@ class JsonSink(object):
       else:
         self.sink_data(str(fl))
   def internal_put_flop(self, val):
+    """for internal use only"""
     fl = float(val)
     if not math.isfinite(fl):
       raise Exception("number not finite")
     self.sink_data(str(fl))
   def internal_put_flop_ex(self, val):
+    """for internal use only"""
     fl = float(val)
     if not math.isfinite(fl):
       self.sink_data("null")
@@ -406,6 +412,7 @@ class JsonSink(object):
     self.first = False
     self.internal_put_number(val)
   def put_number_ex(self, key, val): # convert NaN/Inf to null
+    """convert NaN/Inf to null"""
     if self.veryfirst:
       raise Exception("logic error")
     self.internal_indent(not self.first)
@@ -428,6 +435,7 @@ class JsonSink(object):
     self.first = False
     self.internal_put_flop(val)
   def put_flop_ex(self, key, val): # convert NaN/Inf to null
+    """convert NaN/Inf to null"""
     if self.veryfirst:
       raise Exception("logic error")
     self.internal_indent(not self.first)
@@ -445,6 +453,7 @@ class JsonSink(object):
     self.internal_put_number(val)
     self.first = False
   def add_number_ex(self, val): # convert NaN/Inf to null
+    """convert NaN/Inf to null"""
     if not self.veryfirst:
       self.internal_indent(not self.first)
     self.veryfirst = False
@@ -457,6 +466,7 @@ class JsonSink(object):
     self.internal_put_flop(val)
     self.first = False
   def add_flop_ex(self, val): # convert NaN/Inf to null
+    """convert NaN/Inf to null"""
     if not self.veryfirst:
       self.internal_indent(not self.first)
     self.veryfirst = False
@@ -620,6 +630,7 @@ class JsonStream(object):
   def allow_trailing_comma(self):
     self.trailing_commas = True
   def get_keystack(self): # for internal use only
+    """for internal use only"""
     if (self.keystack[-1] == None):
       self.keypresent = False
       self.keystack.pop()
@@ -628,18 +639,22 @@ class JsonStream(object):
     self.key = self.keystack[-1]
     self.keystack.pop()
   def put_keystack_1(self): # for internal use only
+    """for internal use only"""
     if not self.keypresent:
       self.keystack.append(None)
       self.keypresent = False
       return
     self.keystack.append(self.key)
   def put_keystack_2(self): # for internal use only
+    """for internal use only"""
     self.keypresent = False
   def get_key(self): # for internal use only
+    """for internal use only"""
     if not self.keypresent:
       return None
     return self.key.getvalue()
   def strip_comment(self, buf, start, i, sz, eof): # for internal use only
+    """for internal use only"""
     i+=1
     self.mode = JSONSTREAM_MODE_ENDWS
     while i < sz:
