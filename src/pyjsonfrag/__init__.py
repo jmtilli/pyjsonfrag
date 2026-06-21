@@ -1,4 +1,6 @@
 import io
+import json
+import math
 
 JSONSTREAM_MODE_KEYSTRING = 1
 JSONSTREAM_MODE_KEYSTRING_ESCAPE = 2
@@ -17,6 +19,298 @@ JSONSTREAM_MODE_COLON = 14
 JSONSTREAM_MODE_COMMA = 15
 JSONSTREAM_MODE_NUMBER = 16
 JSONSTREAM_MODE_ENDWS = 17
+
+class JsonSink(object):
+  def sink_data(self, dat):
+    assert False # this method must be implemented
+  def __init__(self, tabs, indentamount):
+    if tabs:
+      self.commanlindentchars = ",\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
+    else:
+      self.commanlindentchars = ",\n                                                                      "
+    self.indentamount = indentamount
+    self.curindentlevel = 0
+    self.first = True
+    self.veryfirst = True
+    self.commentcomma = False
+    self.commentnewline = False
+  def internal_indent(self, comma):
+    if self.indentamount is not None:
+      toindent = self.curindentlevel * self.indentamount
+    else:
+      toindent = 0
+    first = True
+    indentchars = self.commanlindentchars
+    off = 2
+    do_extracomma = False
+    if not comma:
+      indentchars = indentchars[1:]
+      off -= 1
+    if self.commentcomma:
+      comma = False
+      self.commentcomma = False
+    if self.indentamount is None:
+      if comma:
+        self.sink_data(",")
+        return
+      return
+    if not self.commentnewline:
+      if toindent == 0:
+        if comma:
+          self.sink_data(",\n")
+          return
+        self.sink_data("\n")
+        return
+    if self.commentnewline and not comma:
+      first = False
+    elif self.commentnewline and comma:
+      first = False
+      do_extracomma = True
+    self.commentnewline = False
+    while toindent > 0:
+      thisround = toindent
+      if thisround > len(indentchars)-2:
+        thisround = len(indentchars)-2
+      if first:
+        sub = indentchars[0:(thisround+off)]
+      else:
+        sub = indentchars[off:(thisround+off)]
+      self.sink_data(sub)
+      toindent -= thisround
+      first = False
+    if do_extracomma:
+      self.sink_data(", ")
+  def internal_put_string(self, val):
+    self.sink_data(json.dumps(str(val)))
+  def internal_put_number(self, val):
+    if type(val) == int:
+      self.sink_data(str(val))
+    else:
+      fl = float(val)
+      if not math.isfinite(fl):
+        raise Exception("number not finite")
+      self.sink_data(str(fl))
+  def internal_put_number_ex(self, val):
+    if type(val) == int:
+      self.sink_data(str(val))
+    else:
+      fl = float(val)
+      if not math.isfinite(fl):
+        self.sink_data("null")
+      else:
+        self.sink_data(str(fl))
+  def internal_put_flop(self, val):
+    fl = float(val)
+    if not math.isfinite(fl):
+      raise Exception("number not finite")
+    self.sink_data(str(fl))
+  def internal_put_flop_ex(self, val):
+    fl = float(val)
+    if not math.isfinite(fl):
+      self.sink_data("null")
+    else:
+      self.sink_data(str(fl))
+  def put_start_dict(self, key):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    self.first = True
+    self.curindentlevel += 1
+    if self.indentamount is None:
+      self.sink_data(":{")
+    else:
+      self.sink_data(": {")
+  def put_start_array(self, key):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    self.first = True
+    self.curindentlevel += 1
+    if self.indentamount is None:
+      self.sink_data(":[")
+    else:
+      self.sink_data(": [")
+  def add_start_dict(self):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.first = True
+    self.curindentlevel += 1
+    self.sink_data("{")
+  def add_start_array(self):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.first = True
+    self.curindentlevel += 1
+    self.sink_data("[")
+  def end_dict(self):
+    if self.curindentlevel == 0:
+      raise Exception("logic error")
+    self.curindentlevel -= 1
+    if not self.first:
+      self.internal_indent(False)
+    self.first = False
+    self.sink_data("}")
+  def end_array(self):
+    if self.curindentlevel == 0:
+      raise Exception("logic error")
+    self.curindentlevel -= 1
+    if not self.first:
+      self.internal_indent(False)
+    self.first = False
+    self.sink_data("]")
+  def put_string(self, key, val):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":")
+    else:
+      self.sink_data(": ")
+    self.first = False
+    self.internal_put_string(val)
+  def add_string(self, val):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.internal_put_string(val)
+    self.first = False
+  def put_boolean(self, key, val):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if val:
+      if self.indentamount is None:
+        self.sink_data(":true")
+      else:
+        self.sink_data(": true")
+    else:
+      if self.indentamount is None:
+        self.sink_data(":false")
+      else:
+        self.sink_data(": false")
+    self.first = False
+  def add_boolean(self, val):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    if val:
+      self.sink_data("true")
+    else:
+      self.sink_data("false")
+    self.first = False
+  def put_null(self, key):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":null")
+    else:
+      self.sink_data(": null")
+    self.first = False
+  def add_null(self):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.sink_data("null")
+    self.first = False
+  def comment(self, comma_seen, val, force_multiline=False):
+    if "\r" in val or "\n" in val:
+      force_multiline = True
+    if force_multiline:
+      if comma_seen:
+        self.sink_data(", /*")
+        self.commentcomma = True
+        self.first = True
+      else:
+        self.sink_data(" /*")
+      self.sink_data(val)
+      self.sink_data("*/\n")
+      self.commentnewline = True
+      return
+    if comma_seen:
+      self.sink_data(", //")
+      self.commentcomma = True
+      self.first = True
+    else:
+      self.sink_data(" //")
+    self.sink_data(val)
+    self.sink_data("\n")
+    self.commentnewline = True
+  def put_number(self, key, val):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":")
+    else:
+      self.sink_data(": ")
+    self.first = False
+    self.internal_put_number(val)
+  def put_number_ex(self, key, val): # convert NaN/Inf to null
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":")
+    else:
+      self.sink_data(": ")
+    self.first = False
+    self.internal_put_number_ex(val)
+  def put_flop(self, key, val):
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":")
+    else:
+      self.sink_data(": ")
+    self.first = False
+    self.internal_put_flop(val)
+  def put_flop_ex(self, key, val): # convert NaN/Inf to null
+    if self.veryfirst:
+      raise Exception("logic error")
+    self.internal_indent(not self.first)
+    self.internal_put_string(key)
+    if self.indentamount is None:
+      self.sink_data(":")
+    else:
+      self.sink_data(": ")
+    self.first = False
+    self.internal_put_flop_ex(val)
+  def add_number(self, val):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.internal_put_number(val)
+    self.first = False
+  def add_number_ex(self, val): # convert NaN/Inf to null
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.internal_put_number_ex(val)
+    self.first = False
+  def add_flop(self, val):
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.internal_put_flop(val)
+    self.first = False
+  def add_flop_ex(self, val): # convert NaN/Inf to null
+    if not self.veryfirst:
+      self.internal_indent(not self.first)
+    self.veryfirst = False
+    self.internal_put_flop_ex(val)
+    self.first = False
 
 class JsonHandler(object):
   def handle_comment(self, comma_seen, val, is_multiline):
