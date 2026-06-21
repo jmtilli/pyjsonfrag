@@ -52,52 +52,51 @@ def is_valid_json_errloc(s, allow_comments=False, allow_trailing_comma=False):
       res["errcol"] = len(lines[-1])
     return res
 
-def stringify_one(sink, key, tree):
-  if type(tree) == list or type(tree) == tuple:
-    if key is None:
-      sink.add_start_array()
-    else:
-      sink.put_start_array(key)
-    for tree2 in tree:
-      stringify_one(sink, None, tree2)
-    sink.end_array()
-  elif tree is None:
-    if key is None:
-      sink.add_null()
-    else:
-      sink.put_null(key)
-  elif type(tree) == int:
-    if key is None:
-      sink.add_number_ex(tree)
-    else:
-      sink.put_number_ex(key, tree)
-  elif type(tree) == float:
-    if key is None:
-      sink.add_flop_ex(tree)
-    else:
-      sink.put_flop_ex(key, tree)
-  elif type(tree) == str:
-    if key is None:
-      sink.add_string(tree)
-    else:
-      sink.put_string(key, tree)
-  elif type(tree) == bool:
-    if key is None:
-      sink.add_boolean(tree)
-    else:
-      sink.put_boolean(key, tree)
-  elif type(tree) == dict:
-    if key is None:
-      sink.add_start_dict()
-    else:
-      sink.put_start_dict(key)
-    for key in tree.keys():
-      stringify_one(sink, key, tree[key])
-    sink.end_dict()
-  else:
-    raise Exception("unsupported type")
-
 def stringify_tree(tree, indentation_level=4, use_tabs_for_indentation=False):
+  def stringify_one(sink, key, tree):
+    if type(tree) == list or type(tree) == tuple:
+      if key is None:
+        sink.add_start_array()
+      else:
+        sink.put_start_array(key)
+      for tree2 in tree:
+        stringify_one(sink, None, tree2)
+      sink.end_array()
+    elif tree is None:
+      if key is None:
+        sink.add_null()
+      else:
+        sink.put_null(key)
+    elif type(tree) == int:
+      if key is None:
+        sink.add_number_ex(tree)
+      else:
+        sink.put_number_ex(key, tree)
+    elif type(tree) == float:
+      if key is None:
+        sink.add_flop_ex(tree)
+      else:
+        sink.put_flop_ex(key, tree)
+    elif type(tree) == str:
+      if key is None:
+        sink.add_string(tree)
+      else:
+        sink.put_string(key, tree)
+    elif type(tree) == bool:
+      if key is None:
+        sink.add_boolean(tree)
+      else:
+        sink.put_boolean(key, tree)
+    elif type(tree) == dict:
+      if key is None:
+        sink.add_start_dict()
+      else:
+        sink.put_start_dict(key)
+      for key in tree.keys():
+        stringify_one(sink, key, tree[key])
+      sink.end_dict()
+    else:
+      raise Exception("unsupported type")
   tojoin = []
   class MyJsonSink(JsonSink):
     def __init__(self):
