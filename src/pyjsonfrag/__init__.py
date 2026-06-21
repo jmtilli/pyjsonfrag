@@ -109,6 +109,10 @@ def pretty_print(s,
         sink.add_string(val)
   handler = MyJsonHandler()
   stream = JsonStream(handler)
+  if allow_comments:
+    stream.allow_comments()
+  if allow_trailing_comma:
+    stream.allow_trailing_comma()
   stream.feed(s, 0, len(s), True)
   return ''.join(tojoin)
 
