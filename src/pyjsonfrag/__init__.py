@@ -20,6 +20,66 @@ JSONSTREAM_MODE_COMMA = 15
 JSONSTREAM_MODE_NUMBER = 16
 JSONSTREAM_MODE_ENDWS = 17
 
+def pretty_print(s,
+                 indentation_level=4, use_tabs_for_indentation=False,
+                 allow_comments=False, output_comments=False,
+                 allow_trailing_comma=False):
+  tojoin = []
+  class MyJsonSink(JsonSink):
+    def __init__(self):
+      super().__init__(use_tabs_for_indentation, indentation_level)
+    def sink_data(self, dat):
+      tojoin.append(dat)
+  sink = MyJsonSink()
+  class MyJsonHandler(JsonHandler):
+    def handle_comment(self, comma_seen, val, is_multiline):
+      if output_comments:
+        sink.comment(comma_seen, val, is_multiline)
+    def start_dict(self, key):
+      if key is not None:
+        sink.put_start_dict(key)
+      else:
+        sink.add_start_dict()
+    def start_array(self, key):
+      if key is not None:
+        sink.put_start_array(key)
+      else:
+        sink.add_start_array()
+    def end_dict(self, key):
+      sink.end_dict()
+    def end_array(self, key):
+      sink.end_array()
+    def handle_number(self, key, num, is_integer):
+      if key is not None:
+        if is_integer:
+          sink.put_number(key, num)
+        else:
+          sink.put_flop(key, num)
+      else:
+        if is_integer:
+          sink.add_number(num)
+        else:
+          sink.add_flop(num)
+    def handle_null(self, key):
+      if key is not None:
+        sink.put_null(key)
+      else:
+        sink.add_null()
+    def handle_boolean(self, key, val):
+      if key is not None:
+        sink.put_boolean(key, val)
+      else:
+        sink.add_boolean(val)
+    def handle_string(self, key, val):
+      if key is not None:
+        sink.put_string(key, val)
+      else:
+        sink.add_string(val)
+  handler = MyJsonHandler()
+  stream = JsonStream(handler)
+  stream.feed(s, 0, len(s), True)
+  return ''.join(tojoin)
+
 class JsonSink(object):
   def sink_data(self, dat):
     assert False # this method must be implemented
