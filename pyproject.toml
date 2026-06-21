@@ -1,6 +1,6 @@
 [project]
 name = "pyjsonfrag"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
   { name="Juha-Matti Tilli", email="juha-matti.tilli@iki.fi" },
 ]
