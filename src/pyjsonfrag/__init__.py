@@ -20,6 +20,38 @@ JSONSTREAM_MODE_COMMA = 15
 JSONSTREAM_MODE_NUMBER = 16
 JSONSTREAM_MODE_ENDWS = 17
 
+def is_valid_json(s, allow_comments=False, allow_trailing_comma=False):
+  handler = JsonHandler()
+  stream = JsonStream(handler)
+  if allow_comments:
+    stream.allow_comments()
+  if allow_trailing_comma:
+    stream.allow_trailing_comma()
+  try:
+    stream.feed(s, 0, len(s), True)
+    return True
+  except:
+    return False
+
+def is_valid_json_errloc(s, allow_comments=False, allow_trailing_comma=False):
+  handler = JsonHandler()
+  stream = JsonStream(handler)
+  if allow_comments:
+    stream.allow_comments()
+  if allow_trailing_comma:
+    stream.allow_trailing_comma()
+  try:
+    stream.feed(s, 0, len(s), True)
+    return {"valid": True}
+  except:
+    res = {"valid": False}
+    if hasattr(stream, "errloc"):
+      lines = s[:stream.errloc].split("\n")
+      res["errloc"] = stream.errloc
+      res["errline"] = len(lines)-1
+      res["errcol"] = len(lines[-1])
+    return res
+
 def pretty_print(s,
                  indentation_level=4, use_tabs_for_indentation=False,
                  allow_comments=False, output_comments=False,
