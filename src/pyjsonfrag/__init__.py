@@ -658,20 +658,21 @@ class JsonStream(object):
     i+=1
     self.mode = JSONSTREAM_MODE_ENDWS
     while i < sz:
-      if self.comments and (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and buf[start+i] == '/':
+      ch = buf[start+i]
+      if self.comments and (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and ch == '/':
         self.comment_seen_preliminary = True
         self.val = io.StringIO()
         i+=1
         continue
       if self.comment_seen_preliminary:
-        if buf[start+i] == '*':
+        if ch == '*':
           self.comment_seen_preliminary = False
           self.c_comment_seen = True
           self.c_comment_seen_star = False
           self.val = io.StringIO()
           i+=1
           continue
-        if buf[start+i] != '/':
+        if ch != '/':
           self.errloc = i
           raise Exception("illegal comment")
         self.comment_seen_preliminary = False
@@ -680,9 +681,9 @@ class JsonStream(object):
         i+=1
         continue
       if self.c_comment_seen:
-        if buf[start+i] == '*':
+        if ch == '*':
           self.c_comment_seen_star = True
-        elif self.c_comment_seen_star and buf[start+i] == '/':
+        elif self.c_comment_seen_star and ch == '/':
           self.c_comment_seen = False
           self.c_comment_seen_star = False
           if self.handler.handle_comment:
@@ -691,19 +692,19 @@ class JsonStream(object):
           if self.c_comment_seen_star:
             self.val.write('*')
           self.c_comment_seen_star = False
-          self.val.write(buf[start+i])
+          self.val.write(ch)
         i+=1
         continue
       if self.cpp_comment_seen:
-        if buf[start+i] == '\n':
+        if ch == '\n':
           self.cpp_comment_seen = False
           if self.handler.handle_comment:
             self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
         else:
-          self.val.write(buf[start+i])
+          self.val.write(ch)
         i+=1
         continue
-      if buf[start+i] == ' ' or buf[start+i] == '\n' or buf[start+i] == '\r' or buf[start+i] == '\t':
+      if ch == ' ' or ch == '\n' or ch == '\r' or ch == '\t':
         i+=1
         continue
       self.errloc = i
@@ -721,6 +722,7 @@ class JsonStream(object):
       return -1
     i = 0
     while i < sz:
+      ch = buf[start+i]
       if self.mode == JSONSTREAM_MODE_ENDWS:
         i -= 1
         self.strip_comment(buf, start, i, sz, eof)
@@ -728,19 +730,19 @@ class JsonStream(object):
           return 0
         return -1
       if self.mode == JSONSTREAM_MODE_KEYSTRING:
-        if buf[start+i] == '\\':
+        if ch == '\\':
           self.mode = JSONSTREAM_MODE_KEYSTRING_ESCAPE
-        elif buf[start+i] == '"':
+        elif ch == '"':
           self.keypresent = True
           self.mode = JSONSTREAM_MODE_COLON
         else:
-          self.key.write(buf[start+i])
+          self.key.write(ch)
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_STRING:
-        if buf[start+i] == '\\':
+        if ch == '\\':
           self.mode = JSONSTREAM_MODE_STRING_ESCAPE
-        elif buf[start+i] == '"':
+        elif ch == '"':
           self.mode = JSONSTREAM_MODE_COMMA
           if not self.handler.handle_string:
             if len(self.keystack) == 0:
@@ -757,21 +759,21 @@ class JsonStream(object):
               return 0
             return -1
         else:
-          self.val.write(buf[start+i])
+          self.val.write(ch)
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_KEYSTRING_ESCAPE:
-        if buf[start+i] == 'b':
+        if ch == 'b':
           self.key.write('\b')
-        elif buf[start+i] == 'f':
+        elif ch == 'f':
           self.key.write('\f')
-        elif buf[start+i] == 'r':
+        elif ch == 'r':
           self.key.write('\r')
-        elif buf[start+i] == 'n':
+        elif ch == 'n':
           self.key.write('\n')
-        elif buf[start+i] == 't':
+        elif ch == 't':
           self.key.write('\t')
-        elif buf[start+i] == 'u':
+        elif ch == 'u':
           self.mode = JSONSTREAM_MODE_KEYSTRING_UESCAPE
           self.uescape = io.StringIO()
         else:
@@ -780,17 +782,17 @@ class JsonStream(object):
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_STRING_ESCAPE:
-        if buf[start+i] == 'b':
+        if ch == 'b':
           self.val.write('\b')
-        elif buf[start+i] == 'f':
+        elif ch == 'f':
           self.val.write('\f')
-        elif buf[start+i] == 'r':
+        elif ch == 'r':
           self.val.write('\r')
-        elif buf[start+i] == 'n':
+        elif ch == 'n':
           self.val.write('\n')
-        elif buf[start+i] == 't':
+        elif ch == 't':
           self.val.write('\t')
-        elif buf[start+i] == 'u':
+        elif ch == 'u':
           self.mode = JSONSTREAM_MODE_STRING_UESCAPE
           self.uescape = io.StringIO()
         else:
@@ -799,8 +801,8 @@ class JsonStream(object):
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_STRING_UESCAPE and len(self.uescape.getvalue()) < 4:
-        if (buf[start+i] >= '0' and buf[start+i] <= '9') or (buf[start+i] >= 'A' and buf[start+i] <= 'F') or (buf[start+i] >= 'a' and buf[start+i] <= 'f'):
-          self.uescape.write(buf[start+i])
+        if (ch >= '0' and ch <= '9') or (ch >= 'A' and ch <= 'F') or (ch >= 'a' and ch <= 'f'):
+          self.uescape.write(ch)
           if len(self.uescape.getvalue()) == 4:
             self.val.write(chr(int(self.uescape.getvalue(),16)))
             self.mode = JSONSTREAM_MODE_STRING
@@ -808,28 +810,28 @@ class JsonStream(object):
           continue
         raise Exception("Illegal unicode escape")
       elif self.mode == JSONSTREAM_MODE_KEYSTRING_UESCAPE and len(self.uescape.getvalue()) < 4:
-        if (buf[start+i] >= '0' and buf[start+i] <= '9') or (buf[start+i] >= 'A' and buf[start+i] <= 'F') or (buf[start+i] >= 'a' and buf[start+i] <= 'f'):
-          self.uescape.write(buf[start+i])
+        if (ch >= '0' and ch <= '9') or (ch >= 'A' and ch <= 'F') or (ch >= 'a' and ch <= 'f'):
+          self.uescape.write(ch)
           if len(self.uescape.getvalue()) == 4:
             self.key.write(chr(int(self.uescape.getvalue(),16)))
             self.mode = JSONSTREAM_MODE_KEYSTRING
           i += 1
           continue
         raise Exception("Illegal unicode escape")
-      if self.comments and (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and buf[start+i] == '/' and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
+      if self.comments and (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and ch == '/' and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
         self.comment_seen_preliminary = True
         self.val = io.StringIO()
         i += 1
         continue
       if self.comment_seen_preliminary:
-        if buf[start+i] == '*':
+        if ch == '*':
           self.comment_seen_preliminary = False
           self.c_comment_seen = True
           self.c_comment_seen_star = False
           self.val = io.StringIO()
           i += 1
           continue
-        if buf[start+i] != '/':
+        if ch != '/':
           self.errloc = i
           raise Exception("illegal comment")
         self.comment_seen_preliminary = False
@@ -838,9 +840,9 @@ class JsonStream(object):
         i += 1
         continue
       if self.c_comment_seen:
-        if buf[start+i] == '*':
+        if ch == '*':
           self.c_comment_seen_star = True
-        elif self.c_comment_seen_star and buf[start+i] == '/':
+        elif self.c_comment_seen_star and ch == '/':
           self.c_comment_seen = False
           self.c_comment_seen_star = False
           if self.handler.handle_comment:
@@ -849,30 +851,30 @@ class JsonStream(object):
           if self.c_comment_seen_star:
             self.val.write('*')
           self.c_comment_seen_star = False
-          self.val.write(buf[start+i])
+          self.val.write(ch)
         i += 1
         continue
       if self.cpp_comment_seen:
-        if buf[start+i] == '\n':
+        if ch == '\n':
           self.cpp_comment_seen = False
           if self.handler.handle_comment:
             self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
         else:
-          self.val.write(buf[start+i])
+          self.val.write(ch)
         i += 1
         continue
-      if (buf[start+i] == ' ' or buf[start+i] == '\n' or buf[start+i] == '\r' or buf[start+i] == '\t') and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
+      if (ch == ' ' or ch == '\n' or ch == '\r' or ch == '\t') and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
         i += 1
         continue
       if self.mode == JSONSTREAM_MODE_COLON:
-        if buf[start+i] != ':':
+        if ch != ':':
           self.errloc = i
           raise Exception("invalid JSON")
         self.mode = JSONSTREAM_MODE_VAL
         i += 1
         continue
       if self.mode == JSONSTREAM_MODE_COMMA:
-        if buf[start+i] == ',':
+        if ch == ',':
           self.comma_seen = True
           if self.keypresent:
             self.mode = JSONSTREAM_MODE_KEY
@@ -882,7 +884,7 @@ class JsonStream(object):
           i += 1
           continue
       self.comma_seen = False
-      if (self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or (self.trailing_commas and self.mode == JSONSTREAM_MODE_KEY)) and buf[start+i] == '}':
+      if (self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or (self.trailing_commas and self.mode == JSONSTREAM_MODE_KEY)) and ch == '}':
         if self.mode == JSONSTREAM_MODE_COMMA:
           if not self.keypresent:
             self.errloc = i
@@ -906,7 +908,7 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      if (self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTVAL or (self.trailing_commas and self.mode == JSONSTREAM_MODE_VAL)) and buf[start+i] == ']':
+      if (self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTVAL or (self.trailing_commas and self.mode == JSONSTREAM_MODE_VAL)) and ch == ']':
         if self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_VAL:
           if self.keypresent or len(self.keystack) == 0:
             self.errloc = i
@@ -931,7 +933,7 @@ class JsonStream(object):
         i += 1
         continue
       if (self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_VAL):
-        if buf[start+i] == '{':
+        if ch == '{':
           self.put_keystack_1()
           self.mode = JSONSTREAM_MODE_FIRSTKEY
           if not self.handler.start_dict:
@@ -942,7 +944,7 @@ class JsonStream(object):
           self.put_keystack_2()
           i += 1
           continue
-        elif buf[start+i] == '[':
+        elif ch == '[':
           self.put_keystack_1()
           self.mode = JSONSTREAM_MODE_FIRSTVAL
           if not self.handler.start_array:
@@ -953,33 +955,33 @@ class JsonStream(object):
           self.put_keystack_2()
           i += 1
           continue
-        elif buf[start+i] == 'n':
+        elif ch == 'n':
           self.mode = JSONSTREAM_MODE_NULL
           self.sz = 1
           i += 1
           continue
-        elif buf[start+i] == 'f':
+        elif ch == 'f':
           self.mode = JSONSTREAM_MODE_FALSE
           self.sz = 1
           i += 1
           continue
-        elif buf[start+i] == 't':
+        elif ch == 't':
           self.mode = JSONSTREAM_MODE_TRUE
           self.sz = 1
           i += 1
           continue
-        elif buf[start+i] == '"':
+        elif ch == '"':
           self.mode = JSONSTREAM_MODE_STRING
           self.val = io.StringIO()
           i += 1
           continue
-        elif buf[start+i] == '-' or (buf[start+i] >= '0' and buf[start+i] <= '9'):
+        elif ch == '-' or (ch >= '0' and ch <= '9'):
           self.mode = JSONSTREAM_MODE_NUMBER
           self.is_integer = True
           self.val = io.StringIO()
           # FALLTHROUGH
       elif self.mode == JSONSTREAM_MODE_TRUE:
-        if buf[start+i] != "true"[self.sz]:
+        if ch != "true"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
         self.sz += 1
@@ -1004,7 +1006,7 @@ class JsonStream(object):
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_FALSE:
-        if buf[start+i] != "false"[self.sz]:
+        if ch != "false"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
         self.sz += 1
@@ -1029,7 +1031,7 @@ class JsonStream(object):
         i += 1
         continue
       elif self.mode == JSONSTREAM_MODE_NULL:
-        if buf[start+i] != "null"[self.sz]:
+        if ch != "null"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
         self.sz += 1
@@ -1053,36 +1055,36 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      elif (self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_FIRSTKEY) and buf[start+i] == '"':
+      elif (self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_FIRSTKEY) and ch == '"':
         self.mode = JSONSTREAM_MODE_KEYSTRING
         self.key = io.StringIO()
         i += 1
         continue
       if self.mode == JSONSTREAM_MODE_NUMBER:
-        if self.val.getvalue() == "" and buf[start+i] == '-':
-          self.val.write(buf[start+i])
+        if self.val.getvalue() == "" and ch == '-':
+          self.val.write(ch)
           i += 1
           continue
-        if (self.val.getvalue() == "" or self.val.getvalue() == "-") and buf[start+i] >= '0' and buf[start+i] <= '9':
-          self.val.write(buf[start+i])
+        if (self.val.getvalue() == "" or self.val.getvalue() == "-") and ch >= '0' and ch <= '9':
+          self.val.write(ch)
           i += 1
           continue
-        if (self.val.getvalue() != "0" and self.val.getvalue() != "-0") and buf[start+i] >= '0' and buf[start+i] <= '9':
-          self.val.write(buf[start+i])
+        if (self.val.getvalue() != "0" and self.val.getvalue() != "-0") and ch >= '0' and ch <= '9':
+          self.val.write(ch)
           i += 1
           continue
-        if buf[start+i] == '.' and ("." not in self.val.getvalue()) and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
+        if ch == '.' and ("." not in self.val.getvalue()) and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
           self.is_integer = False
-          self.val.write(buf[start+i])
+          self.val.write(ch)
           i += 1
           continue
-        if (buf[start+i] == 'E' or buf[start+i] == 'e') and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
+        if (ch == 'E' or ch == 'e') and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
           self.is_integer = False
-          self.val.write(buf[start+i])
+          self.val.write(ch)
           i += 1
           continue
-        if (buf[start+i] == '-' or buf[start+i] == '+') and len(self.val.getvalue()) and (self.val.getvalue()[-1] == 'E' or self.val.getvalue()[-1] == 'e'):
-          self.val.write(buf[start+i])
+        if (ch == '-' or ch == '+') and len(self.val.getvalue()) and (self.val.getvalue()[-1] == 'E' or self.val.getvalue()[-1] == 'e'):
+          self.val.write(ch)
           i += 1
           continue
         if self.is_integer:
