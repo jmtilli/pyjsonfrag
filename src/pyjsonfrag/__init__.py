@@ -818,52 +818,53 @@ class JsonStream(object):
           i += 1
           continue
         raise Exception("Illegal unicode escape")
-      if self.comments and (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and ch == '/' and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
-        self.comment_seen_preliminary = True
-        self.val = io.StringIO()
-        i += 1
-        continue
-      if self.comment_seen_preliminary:
-        if ch == '*':
-          self.comment_seen_preliminary = False
-          self.c_comment_seen = True
-          self.c_comment_seen_star = False
+      if self.comments:
+        if (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and ch == '/' and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
+          self.comment_seen_preliminary = True
           self.val = io.StringIO()
           i += 1
           continue
-        if ch != '/':
-          self.errloc = i
-          raise Exception("illegal comment")
-        self.comment_seen_preliminary = False
-        self.cpp_comment_seen = True
-        self.val = io.StringIO()
-        i += 1
-        continue
-      if self.c_comment_seen:
-        if ch == '*':
-          self.c_comment_seen_star = True
-        elif self.c_comment_seen_star and ch == '/':
-          self.c_comment_seen = False
-          self.c_comment_seen_star = False
-          if self.handler.handle_comment:
-            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), True)
-        else:
-          if self.c_comment_seen_star:
-            self.val.write('*')
-          self.c_comment_seen_star = False
-          self.val.write(ch)
-        i += 1
-        continue
-      if self.cpp_comment_seen:
-        if ch == '\n':
-          self.cpp_comment_seen = False
-          if self.handler.handle_comment:
-            self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
-        else:
-          self.val.write(ch)
-        i += 1
-        continue
-      if (ch == ' ' or ch == '\n' or ch == '\r' or ch == '\t') and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
+        elif self.comment_seen_preliminary:
+          if ch == '*':
+            self.comment_seen_preliminary = False
+            self.c_comment_seen = True
+            self.c_comment_seen_star = False
+            self.val = io.StringIO()
+            i += 1
+            continue
+          if ch != '/':
+            self.errloc = i
+            raise Exception("illegal comment")
+          self.comment_seen_preliminary = False
+          self.cpp_comment_seen = True
+          self.val = io.StringIO()
+          i += 1
+          continue
+        elif self.c_comment_seen:
+          if ch == '*':
+            self.c_comment_seen_star = True
+          elif self.c_comment_seen_star and ch == '/':
+            self.c_comment_seen = False
+            self.c_comment_seen_star = False
+            if self.handler.handle_comment:
+              self.handler.handle_comment(self.comma_seen, self.val.getvalue(), True)
+          else:
+            if self.c_comment_seen_star:
+              self.val.write('*')
+            self.c_comment_seen_star = False
+            self.val.write(ch)
+          i += 1
+          continue
+        elif self.cpp_comment_seen:
+          if ch == '\n':
+            self.cpp_comment_seen = False
+            if self.handler.handle_comment:
+              self.handler.handle_comment(self.comma_seen, self.val.getvalue(), False)
+          else:
+            self.val.write(ch)
+          i += 1
+          continue
+      if (ch in ' \n\r\t') and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
         i += 1
         continue
       if self.mode == JSONSTREAM_MODE_COLON:
@@ -873,7 +874,7 @@ class JsonStream(object):
         self.mode = JSONSTREAM_MODE_VAL
         i += 1
         continue
-      if self.mode == JSONSTREAM_MODE_COMMA:
+      elif self.mode == JSONSTREAM_MODE_COMMA:
         if ch == ',':
           self.comma_seen = True
           if self.keypresent:
