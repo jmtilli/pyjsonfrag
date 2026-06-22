@@ -930,29 +930,55 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      if (self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_VAL) and buf[start+i] == '{':
-        self.put_keystack_1()
-        self.mode = JSONSTREAM_MODE_FIRSTKEY
-        if not self.handler.start_dict:
+      if (self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_VAL):
+        if buf[start+i] == '{':
+          self.put_keystack_1()
+          self.mode = JSONSTREAM_MODE_FIRSTKEY
+          if not self.handler.start_dict:
+            self.put_keystack_2()
+            i += 1
+            continue
+          self.handler.start_dict(self.get_key())
           self.put_keystack_2()
           i += 1
           continue
-        self.handler.start_dict(self.get_key())
-        self.put_keystack_2()
-        i += 1
-        continue
-      if (self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_VAL) and buf[start+i] == '[':
-        self.put_keystack_1()
-        self.mode = JSONSTREAM_MODE_FIRSTVAL
-        if not self.handler.start_array:
+        elif buf[start+i] == '[':
+          self.put_keystack_1()
+          self.mode = JSONSTREAM_MODE_FIRSTVAL
+          if not self.handler.start_array:
+            self.put_keystack_2()
+            i += 1
+            continue
+          self.handler.start_array(self.get_key())
           self.put_keystack_2()
           i += 1
           continue
-        self.handler.start_array(self.get_key())
-        self.put_keystack_2()
-        i += 1
-        continue
-      if self.mode == JSONSTREAM_MODE_TRUE:
+        elif buf[start+i] == 'n':
+          self.mode = JSONSTREAM_MODE_NULL
+          self.sz = 1
+          i += 1
+          continue
+        elif buf[start+i] == 'f':
+          self.mode = JSONSTREAM_MODE_FALSE
+          self.sz = 1
+          i += 1
+          continue
+        elif buf[start+i] == 't':
+          self.mode = JSONSTREAM_MODE_TRUE
+          self.sz = 1
+          i += 1
+          continue
+        elif buf[start+i] == '"':
+          self.mode = JSONSTREAM_MODE_STRING
+          self.val = io.StringIO()
+          i += 1
+          continue
+        elif buf[start+i] == '-' or (buf[start+i] >= '0' and buf[start+i] <= '9'):
+          self.mode = JSONSTREAM_MODE_NUMBER
+          self.is_integer = True
+          self.val = io.StringIO()
+          # FALLTHROUGH
+      elif self.mode == JSONSTREAM_MODE_TRUE:
         if buf[start+i] != "true"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
@@ -977,7 +1003,7 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      if self.mode == JSONSTREAM_MODE_FALSE:
+      elif self.mode == JSONSTREAM_MODE_FALSE:
         if buf[start+i] != "false"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
@@ -1002,7 +1028,7 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      if self.mode == JSONSTREAM_MODE_NULL:
+      elif self.mode == JSONSTREAM_MODE_NULL:
         if buf[start+i] != "null"[self.sz]:
           self.errloc = i
           raise Exception("invalid JSON")
@@ -1027,35 +1053,11 @@ class JsonStream(object):
           return -1
         i += 1
         continue
-      if (self.mode == JSONSTREAM_MODE_VAL or self.mode == JSONSTREAM_MODE_FIRSTVAL) and buf[start+i] == 'n':
-        self.mode = JSONSTREAM_MODE_NULL
-        self.sz = 1
-        i += 1
-        continue
-      if (self.mode == JSONSTREAM_MODE_VAL or self.mode == JSONSTREAM_MODE_FIRSTVAL) and buf[start+i] == 'f':
-        self.mode = JSONSTREAM_MODE_FALSE
-        self.sz = 1
-        i += 1
-        continue
-      if (self.mode == JSONSTREAM_MODE_VAL or self.mode == JSONSTREAM_MODE_FIRSTVAL) and buf[start+i] == 't':
-        self.mode = JSONSTREAM_MODE_TRUE
-        self.sz = 1
-        i += 1
-        continue
-      if (self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_FIRSTKEY) and buf[start+i] == '"':
+      elif (self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_FIRSTKEY) and buf[start+i] == '"':
         self.mode = JSONSTREAM_MODE_KEYSTRING
         self.key = io.StringIO()
         i += 1
         continue
-      if (self.mode == JSONSTREAM_MODE_VAL or self.mode == JSONSTREAM_MODE_FIRSTVAL) and buf[start+i] == '"':
-        self.mode = JSONSTREAM_MODE_STRING
-        self.val = io.StringIO()
-        i += 1
-        continue
-      if (self.mode == JSONSTREAM_MODE_VAL or self.mode == JSONSTREAM_MODE_FIRSTVAL) and (buf[start+i] == '-' or (buf[start+i] >= '0' and buf[start+i] <= '9')):
-        self.mode = JSONSTREAM_MODE_NUMBER
-        self.is_integer = True
-        self.val = io.StringIO()
       if self.mode == JSONSTREAM_MODE_NUMBER:
         if self.val.getvalue() == "" and buf[start+i] == '-':
           self.val.write(buf[start+i])
