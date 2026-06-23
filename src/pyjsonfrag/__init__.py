@@ -820,6 +820,7 @@ class JsonStream(object):
             self.mode = JSONSTREAM_MODE_STRING
           i += 1
           continue
+        self.errloc = i
         raise Exception("Illegal unicode escape")
       elif self.mode == JSONSTREAM_MODE_KEYSTRING_UESCAPE and len(self.uescape.getvalue()) < 4:
         if (ch >= '0' and ch <= '9') or (ch >= 'A' and ch <= 'F') or (ch >= 'a' and ch <= 'f'):
@@ -829,6 +830,7 @@ class JsonStream(object):
             self.mode = JSONSTREAM_MODE_KEYSTRING
           i += 1
           continue
+        self.errloc = i
         raise Exception("Illegal unicode escape")
       if self.comments:
         if (not self.comment_seen_preliminary) and (not self.cpp_comment_seen) and (not self.c_comment_seen) and ch == '/' and (self.mode == JSONSTREAM_MODE_COLON or self.mode == JSONSTREAM_MODE_COMMA or self.mode == JSONSTREAM_MODE_FIRSTKEY or self.mode == JSONSTREAM_MODE_FIRSTVAL or self.mode == JSONSTREAM_MODE_KEY or self.mode == JSONSTREAM_MODE_VAL):
@@ -1133,6 +1135,7 @@ class JsonStream(object):
         elif self.numstate == JSONNUM_EXPONENT_DIGIT_SEEN:
           self.numstate = JSONNUM_EXPONENT_SEEN
         if self.numstate != JSONNUM_EXPONENT_SEEN:
+          self.errloc = i
           raise Exception("invalid number")
         if self.is_integer:
           numval = int(self.val.getvalue())
