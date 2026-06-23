@@ -20,6 +20,18 @@ JSONSTREAM_MODE_COMMA = 15
 JSONSTREAM_MODE_NUMBER = 16
 JSONSTREAM_MODE_ENDWS = 17
 
+JSONNUM_START = 101
+JSONNUM_MINUS_NOT_PERMITTED = 102
+JSONNUM_NUMBER_DID_NOT_START_WITH_ZERO = 103
+JSONNUM_NUMBER_DONE = 104
+JSONNUM_PERIOD_SEEN = 105
+JSONNUM_PERIOD_DIGIT_SEEN = 106
+JSONNUM_FRACTION_SEEN = 107
+JSONNUM_E_SEEN = 108
+JSONNUM_EPLUSMINUS_SEEN = 109
+JSONNUM_EXPONENT_DIGIT_SEEN = 110
+JSONNUM_EXPONENT_SEEN = 111
+
 def is_valid_json(s, allow_comments=False, allow_trailing_comma=False):
   handler = JsonHandler()
   stream = JsonStream(handler)
@@ -978,6 +990,7 @@ class JsonStream(object):
           continue
         elif ch == '-' or (ch >= '0' and ch <= '9'):
           self.mode = JSONSTREAM_MODE_NUMBER
+          self.numstate = JSONNUM_START
           self.is_integer = True
           self.val = io.StringIO()
           # FALLTHROUGH
@@ -1062,32 +1075,65 @@ class JsonStream(object):
         i += 1
         continue
       if self.mode == JSONSTREAM_MODE_NUMBER:
-        if self.val.getvalue() == "" and ch == '-':
-          self.val.write(ch)
-          i += 1
-          continue
-        if (self.val.getvalue() == "" or self.val.getvalue() == "-") and ch >= '0' and ch <= '9':
-          self.val.write(ch)
-          i += 1
-          continue
-        if (self.val.getvalue() != "0" and self.val.getvalue() != "-0") and ch >= '0' and ch <= '9':
-          self.val.write(ch)
-          i += 1
-          continue
-        if ch == '.' and ("." not in self.val.getvalue()) and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
+        if self.numstate == JSONNUM_START:
+          self.numstate = JSONNUM_MINUS_NOT_PERMITTED
+          if ch == '-':
+            self.val.write(ch)
+            i += 1
+            continue
+        if self.numstate == JSONNUM_MINUS_NOT_PERMITTED:
+          if ch == '0':
+            self.numstate = JSONNUM_NUMBER_DONE
+            self.val.write(ch)
+            i += 1
+            continue
+          elif ch >= '1' and ch <= '9':
+            self.numstate = JSONNUM_NUMBER_DID_NOT_START_WITH_ZERO
+            self.val.write(ch)
+            i += 1
+            continue
+        elif self.numstate == JSONNUM_NUMBER_DID_NOT_START_WITH_ZERO:
+          if ch >= '0' and ch <= '9':
+            self.val.write(ch)
+            i += 1
+            continue
+          self.numstate = JSONNUM_NUMBER_DONE
+        if self.numstate == JSONNUM_NUMBER_DONE and ch == '.':
+          self.numstate = JSONNUM_PERIOD_SEEN
           self.is_integer = False
           self.val.write(ch)
           i += 1
           continue
-        if (ch == 'E' or ch == 'e') and ("E" not in self.val.getvalue()) and ("e" not in self.val.getvalue()):
+        elif (self.numstate == JSONNUM_PERIOD_SEEN or self.numstate == JSONNUM_PERIOD_DIGIT_SEEN) and ch >= '0' and ch <= '9':
+          self.numstate = JSONNUM_PERIOD_DIGIT_SEEN
+          self.val.write(ch)
+          i += 1
+          continue
+        elif self.numstate == JSONNUM_NUMBER_DONE or self.numstate == JSONNUM_PERIOD_DIGIT_SEEN:
+          self.numstate = JSONNUM_FRACTION_SEEN
+        if self.numstate == JSONNUM_FRACTION_SEEN and (ch == 'e' or ch == 'E'):
           self.is_integer = False
+          self.numstate = JSONNUM_E_SEEN
           self.val.write(ch)
           i += 1
           continue
-        if (ch == '-' or ch == '+') and len(self.val.getvalue()) and (self.val.getvalue()[-1] == 'E' or self.val.getvalue()[-1] == 'e'):
+        elif self.numstate == JSONNUM_FRACTION_SEEN:
+          self.numstate = JSONNUM_EXPONENT_SEEN
+        elif self.numstate == JSONNUM_E_SEEN:
+          self.numstate = JSONNUM_EPLUSMINUS_SEEN
+          if ch == '-' or ch == '+':
+            self.val.write(ch)
+            i += 1
+            continue
+        if (self.numstate == JSONNUM_EPLUSMINUS_SEEN or self.numstate == JSONNUM_EXPONENT_DIGIT_SEEN) and ch >= '0' and ch <= '9':
+          self.numstate = JSONNUM_EXPONENT_DIGIT_SEEN
           self.val.write(ch)
           i += 1
           continue
+        elif self.numstate == JSONNUM_EXPONENT_DIGIT_SEEN:
+          self.numstate = JSONNUM_EXPONENT_SEEN
+        if self.numstate != JSONNUM_EXPONENT_SEEN:
+          raise Exception("invalid number")
         if self.is_integer:
           numval = int(self.val.getvalue())
         else:
