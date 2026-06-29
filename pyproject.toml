@@ -1,6 +1,6 @@
 [project]
 name = "pyjsonfrag"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
   { name="Juha-Matti Tilli", email="juha-matti.tilli@iki.fi" },
 ]
@@ -16,6 +16,9 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/jmtilli/pyjsonfrag"
 Issues = "https://github.com/jmtilli/pyjsonfrag/issues"
+
+[project.scripts]
+py_json_pp = "pyjsonfrag:py_json_pp"
 
 [build-system]
 requires = ["hatchling"]
