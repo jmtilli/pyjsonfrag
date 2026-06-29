@@ -18,7 +18,7 @@ Homepage = "https://github.com/jmtilli/pyjsonfrag"
 Issues = "https://github.com/jmtilli/pyjsonfrag/issues"
 
 [project.scripts]
-py_json_pp = "pyjsonfrag:py_json_pp"
+"py_json_pp" = "pyjsonfrag:py_json_pp"
 
 [build-system]
 requires = ["hatchling"]
