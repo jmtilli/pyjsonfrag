@@ -68,7 +68,7 @@ class MyHandler(pyjsonfrag.JsonHandler):
     if key is not None:
       sink.put_string(key, val)
     else:
-      sink.add_string(key, val)
+      sink.add_string(val)
   def handle_number(self, key, val, is_int):
     if key is not None:
       if is_int:

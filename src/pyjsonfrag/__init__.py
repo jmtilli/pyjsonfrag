@@ -777,14 +777,28 @@ class JsonStream(object):
       elif self.mode == JSONSTREAM_MODE_KEYSTRING_ESCAPE:
         if ch == 'b':
           self.key.write('\b')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
         elif ch == 'f':
           self.key.write('\f')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
         elif ch == 'r':
           self.key.write('\r')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
         elif ch == 'n':
           self.key.write('\n')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
         elif ch == 't':
           self.key.write('\t')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
+        elif ch == '/':
+          self.key.write('/')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
+        elif ch == '\\':
+          self.key.write('\\')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
+        elif ch == '"':
+          self.key.write('"')
+          self.mode = JSONSTREAM_MODE_KEYSTRING
         elif ch == 'u':
           self.mode = JSONSTREAM_MODE_KEYSTRING_UESCAPE
           self.uescape = io.StringIO()
@@ -796,14 +810,28 @@ class JsonStream(object):
       elif self.mode == JSONSTREAM_MODE_STRING_ESCAPE:
         if ch == 'b':
           self.val.write('\b')
+          self.mode = JSONSTREAM_MODE_STRING
         elif ch == 'f':
           self.val.write('\f')
+          self.mode = JSONSTREAM_MODE_STRING
         elif ch == 'r':
           self.val.write('\r')
+          self.mode = JSONSTREAM_MODE_STRING
         elif ch == 'n':
           self.val.write('\n')
+          self.mode = JSONSTREAM_MODE_STRING
         elif ch == 't':
           self.val.write('\t')
+          self.mode = JSONSTREAM_MODE_STRING
+        elif ch == '/':
+          self.val.write('/')
+          self.mode = JSONSTREAM_MODE_STRING
+        elif ch == '\\':
+          self.val.write('\\')
+          self.mode = JSONSTREAM_MODE_STRING
+        elif ch == '"':
+          self.val.write('"')
+          self.mode = JSONSTREAM_MODE_STRING
         elif ch == 'u':
           self.mode = JSONSTREAM_MODE_STRING_UESCAPE
           self.uescape = io.StringIO()
@@ -1340,7 +1368,7 @@ def py_json_pp():
       if key is not None:
         sink.put_string(key, val)
       else:
-        sink.add_string(key, val)
+        sink.add_string(val)
     def handle_number(self, key, val, is_int):
       if key is not None:
         if is_int:
